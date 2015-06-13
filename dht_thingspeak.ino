@@ -65,6 +65,34 @@ void setup() {
   dht.begin();
 }
 
+void uploadFn(float t, float h) {
+  // Use WiFiClient class to create TCP connections
+  WiFiClient client;
+  const int httpPort = 80;
+  if (!client.connect(host, httpPort)) {
+    Serial.println("connection failed");
+    return;
+  }
+  
+  // We now create a URI for the request
+  String url = "/update/";
+  //  url += streamId;
+  url += "?key=";
+  url += apiKey;
+  url += "&field1=";
+  url += t;
+  url += "&field2=";
+  url += h;  
+  
+  Serial.print("Requesting URL: ");
+  Serial.println(url);
+  
+  // This will send the request to the server
+  client.print(String("GET ") + url + " HTTP/1.1\r\n" +
+               "Host: " + host + "\r\n" + 
+               "Connection: close\r\n\r\n");  
+}
+
 void loop() {
   // Wait a few seconds between measurements.
   delay(2000);
@@ -102,32 +130,8 @@ void loop() {
   Serial.println(" *F");
   
   
-  
-  // Use WiFiClient class to create TCP connections
-  WiFiClient client;
-  const int httpPort = 80;
-  if (!client.connect(host, httpPort)) {
-    Serial.println("connection failed");
-    return;
-  }
-  
-  // We now create a URI for the request
-  String url = "/update/";
-//  url += streamId;
-  url += "?key=";
-  url += apiKey;
-  url += "&field1=";
-  url += t;
-  url += "&field2=";
-  url += h;  
-  
-  Serial.print("Requesting URL: ");
-  Serial.println(url);
-  
-  // This will send the request to the server
-  client.print(String("GET ") + url + " HTTP/1.1\r\n" +
-               "Host: " + host + "\r\n" + 
-               "Connection: close\r\n\r\n");
+  uploadFn(t, h);
+
   delay(15 * 1000);  
   
 }
