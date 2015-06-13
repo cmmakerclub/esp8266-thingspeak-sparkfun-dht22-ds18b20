@@ -30,13 +30,12 @@ DHT dht(DHTPIN, DHTTYPE, 30);
 
 #include <ESP8266WiFi.h>
 
-const char* ssid     = "OpenWrt_NAT_11_HOME";
-const char* password = "homenetwork";
+const char* ssid     = "OpenWrt_NAT_500GP.101";
+const char* password = "activegateway";
 
 
 const char* host = "api.thingspeak.com";
-const char* streamId   = "....................";
-const char* privateKey = "RW1O1M2SV7UMQ4XG";
+const char* apiKey = "N1GS1H8O5MT8E7";
 
 void setup() {
   Serial.begin(115200); 
@@ -116,7 +115,7 @@ void loop() {
   String url = "/update/";
 //  url += streamId;
   url += "?key=";
-  url += privateKey;
+  url += apiKey;
   url += "&field1=";
   url += t;
   url += "&field2=";
