@@ -2,8 +2,7 @@
 // Written by ladyada, public domain
 
 #include "DHT.h"
-
-
+#include <OneWire.h>
 #include <ESP8266WiFi.h>
 
 const char* ssid     = "OpenWrt_NAT_500GP.101";
@@ -14,10 +13,7 @@ const char* host = "api.thingspeak.com";
 const char* apiKey = "14UX64T1VR0YG0CE";
 
 DHT *dht;
-
-#include <OneWire.h>
-
-OneWire ds(2);  // on pin 2 (a 4.7K resistor is necessary)
+OneWire *ds;  // on pin 2 (a 4.7K resistor is necessary)
 
 
 void setUpWifi() {
@@ -43,14 +39,7 @@ void connectWifi() {
   Serial.println(WiFi.localIP());
 }
 
-void initDht(DHT *dht) {
-  #define DHTPIN 2     // what pin we're connected to
-
-  // Uncomment whatever type you're using!
-  //#define DHTTYPE DHT11   // DHT 11 
-  #define DHTTYPE DHT22   // DHT 22  (AM2302)
-  //#define DHTTYPE DHT21   // DHT 21 (AM2301)
-
+void initDht(DHT **dht, uint8_t pin, uint8_t dht_type) {
   // Connect pin 1 (on the left) of the sensor to +5V
   // NOTE: If using a board with 3.3V logic like an Arduino Due connect pin 1
   // to 3.3V instead of 5V!
@@ -68,20 +57,30 @@ void initDht(DHT *dht) {
   // Example to initialize DHT sensor for Arduino Due:
   //DHT dht(DHTPIN, DHTTYPE, 30); 
 
-  dht = new DHT(DHTPIN, DHTTYPE, 30); 
-  dht->begin();  
-  Serial.println("DHTxx test!");
+  *dht = new DHT(pin, dht_type, 30); 
+  (*dht)->begin();  
+  Serial.println(F("DHTxx test!"))  ;
+}
+
+
+void initDs18b20(OneWire **ds, uint8_t pin) {
+  *ds = new OneWire(pin);
 }
 
 void setup() {
+  #define DHTPIN 2     // what pin we're connected to
+  #define DHTTYPE DHT22   // DHT 22  (AM2302)
 
-  Serial.begin(115200); 
+  #define DS18x20_PIN 4
+
+  Serial.begin(115200);
   delay(10);
   
   setUpWifi();
   connectWifi();
 
-  initDht(dht);
+  initDht(&dht, DHTPIN, DHTTYPE);
+  initDs18b20(&ds, DS18x20_PIN);
 }
 
 void uploadFn(float t, float h) {
@@ -116,6 +115,8 @@ void readDht(DHT *dht, float *temp, float *humid) {
   // Reading temperature or humidity takes about 250 milliseconds!
   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
   float h = dht->readHumidity();
+
+  Serial.println("READ HUMID");
   // Read temperature as Celsius
   float t = dht->readTemperature();
   // Read temperature as Fahrenheit
@@ -148,7 +149,7 @@ void readDht(DHT *dht, float *temp, float *humid) {
   
 }
 
-void readDs18B20(float *temp) {
+void readDs18B20(OneWire *ds, float *temp) {
   byte i;
   byte present = 0;
   byte type_s;
@@ -156,10 +157,10 @@ void readDs18B20(float *temp) {
   byte addr[8];
   float celsius, fahrenheit;
   
-  if ( !ds.search(addr)) {
+  if ( !ds->search(addr)) {
     Serial.println("No more addresses.");
     Serial.println();
-    ds.reset_search();
+    ds->reset_search();
     delay(250);
     return;
   }
@@ -195,22 +196,22 @@ void readDs18B20(float *temp) {
       return;
   } 
 
-  ds.reset();
-  ds.select(addr);
-  ds.write(0x44, 1);        // start conversion, with parasite power on at the end
+  ds->reset();
+  ds->select(addr);
+  ds->write(0x44, 1);        // start conversion, with parasite power on at the end
   
   delay(1000);     // maybe 750ms is enough, maybe not
-  // we might do a ds.depower() here, but the reset will take care of it.
+  // we might do a ds->depower() here, but the reset will take care of it.
   
-  present = ds.reset();
-  ds.select(addr);    
-  ds.write(0xBE);         // Read Scratchpad
+  present = ds->reset();
+  ds->select(addr);    
+  ds->write(0xBE);         // Read Scratchpad
 
   Serial.print("  Data = ");
   Serial.print(present, HEX);
   Serial.print(" ");
   for ( i = 0; i < 9; i++) {           // we need 9 bytes
-    data[i] = ds.read();
+    data[i] = ds->read();
     Serial.print(data[i], HEX);
     Serial.print(" ");
   }
@@ -256,12 +257,12 @@ void loop() {
   static float t;
   static float h;
   
-  //readDht(&dht, &t, &h);
-  readDs18B20(&t);
-  uploadFn(t, t);
-  
-  Serial.println(t);
+  readDht(dht, &t, &h);
+  // readDs18B20(ds, &t);
+  // uploadFn(t, t);
+  // Serial.println(t);
+  Serial.println("LOOPING..");
 
-  delay(15 * 1000);  
+  delay(5 * 1000);  
   
 }
