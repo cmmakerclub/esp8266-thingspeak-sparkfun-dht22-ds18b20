@@ -17,10 +17,6 @@
 const char* ssid     = "OpenWrt_NAT_500GP.101";
 const char* password = "activegateway";
 
-
-const char* host = "api.thingspeak.com";
-const char* apiKey = "14UX64T1VR0YG0CE";
-
 DHT *dht;
 OneWire *ds;  // on pin 2 (a 4.7K resistor is necessary)
 
@@ -77,10 +73,11 @@ void initDs18b20(OneWire **ds, uint8_t pin) {
 }
 
 void setup() {
-#define DHTPIN 2     // what pin we're connected to
-#define DHTTYPE DHT22   // DHT 22  (AM2302)
+  
+  #define DHTPIN 2     // what pin we're connected to
+  #define DHTTYPE DHT22   // DHT 22  (AM2302)
 
-#define DS18x20_PIN 4
+  #define DS18x20_PIN 4
 
   Serial.begin(115200);
   delay(10);
@@ -92,7 +89,10 @@ void setup() {
   initDs18b20(&ds, DS18x20_PIN);
 }
 
-void uploadFn(float t, float h) {
+void uploadThingsSpeak(float t, float h) {
+  static const char* host = "api.thingspeak.com";
+  static const char* apiKey = "14UX64T1VR0YG0CE";
+
   // Use WiFiClient class to create TCP connections
   WiFiClient client;
   const int httpPort = 80;
@@ -258,8 +258,10 @@ void readDs18B20(OneWire *ds, float *temp) {
     else if (cfg == 0x40) raw = raw & ~1; // 11 bit res, 375 ms
     //// default is 12 bit resolution, 750 ms conversion time
   }
+
   celsius = (float)raw / 16.0;
   fahrenheit = celsius * 1.8 + 32.0;
+
   DEBUG_PRINT("  Temperature = ");
   DEBUG_PRINT(celsius);
   DEBUG_PRINT(" Celsius, ");
