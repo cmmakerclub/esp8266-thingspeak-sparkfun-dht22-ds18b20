@@ -26,13 +26,46 @@ const char* password = "activegateway";
 DHT *dht;
 OneWire *ds;  // on pin 2 (a 4.7K resistor is necessary)
 
+void connectWifi();
+void reconnectWifiIfLinkDown();
+void initDht(DHT **dht, uint8_t pin, uint8_t dht_type);
+void initDs18b20(OneWire **ds, uint8_t pin);
+void readDs18B20(OneWire *ds, float *temp);
+void readDht(DHT *dht, float *temp, float *humid);
+void uploadThingsSpeak(float t, float );
+
+void setup() {
+    Serial.begin(115200);
+    delay(10);
+
+    connectWifi();
+
+    initDht(&dht, DHTPIN, DHTTYPE);
+    initDs18b20(&ds, DS18x20_PIN);
+}
+
+void loop() {
+    static float t_ds;
+    static float t_dht;
+    static float h_dht;
+
+    readDht(dht, &t_ds, &h_dht);
+    readDs18B20(ds, &t_ds);
+
+    //uploadFn(t, t);
+    DEBUG_PRINTLN(t_ds);
+
+    // Wait a few seconds between measurements.
+    delay(10 * 1000);
+
+    reconnectWifiIfLinkDown();
+}
 
 void reconnectWifiIfLinkDown() {
     if (WiFi.status() != WL_CONNECTED) {
         DEBUG_PRINTLN("WIFI DISCONNECTED");
         connectWifi();
     }
-
 }
 
 void connectWifi() {
@@ -81,16 +114,6 @@ void initDs18b20(OneWire **ds, uint8_t pin) {
     *ds = new OneWire(pin);
 }
 
-void setup() {
-    Serial.begin(115200);
-    delay(10);
-
-    connectWifi();
-
-    initDht(&dht, DHTPIN, DHTTYPE);
-    initDs18b20(&ds, DS18x20_PIN);
-}
-
 void uploadThingsSpeak(float t, float h) {
     static const char* host = "api.thingspeak.com";
     static const char* apiKey = "14UX64T1VR0YG0CE";
@@ -125,7 +148,7 @@ void uploadThingsSpeak(float t, float h) {
 void readDht(DHT *dht, float *temp, float *humid) {
 
     if (dht == NULL) {
-        DEBUG_PRINTLN("[dht22] is not initialised. please call initDht() first.");
+        DEBUG_PRINTLN(F("[dht22] is not initialised. please call initDht() first."));
         return;
     }
 
@@ -167,7 +190,7 @@ void readDht(DHT *dht, float *temp, float *humid) {
 
 void readDs18B20(OneWire *ds, float *temp) {
     if (ds == NULL) {
-        DEBUG_PRINTLN("[ds18b20] is not initialised. please call initDs18b20() first.");
+        DEBUG_PRINTLN(F("[ds18b20] is not initialised. please call initDs18b20() first."));
         return;
     }
 
@@ -272,21 +295,4 @@ void readDs18B20(OneWire *ds, float *temp) {
 
 
     *temp = celsius;
-}
-
-void loop() {
-    static float t_ds;
-    static float t_dht;
-    static float h_dht;
-
-    readDht(dht, &t_ds, &h_dht);
-    readDs18B20(ds, &t_ds);
-
-    //uploadFn(t, t);
-    DEBUG_PRINTLN(t_ds);
-
-    // Wait a few seconds between measurements.
-    delay(10 * 1000);
-
-    reconnectWifiIfLinkDown();
 }
