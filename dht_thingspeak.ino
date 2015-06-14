@@ -53,6 +53,7 @@ void loop() {
     readDs18B20(ds, &t_ds);
 
     //uploadFn(t, t);
+    uploadSparkfun(t_dht, h_dht);
     DEBUG_PRINTLN(t_ds);
 
     // Wait a few seconds between measurements.
@@ -144,6 +145,39 @@ void uploadThingsSpeak(float t, float h) {
                  "Host: " + host + "\r\n" +
                  "Connection: close\r\n\r\n");
 }
+
+void uploadSparkfun(float t, float h) {
+    const char* host = "data.sparkfun.com";
+    const char* streamId   = "v0A7az1726Sp9ELX700l";
+    const char* privateKey = "aP7mwpJmDZHkyKe5nEE9";
+
+    // Use WiFiClient class to create TCP connections
+    WiFiClient client;
+    const int httpPort = 80;
+    if (!client.connect(host, httpPort)) {
+        DEBUG_PRINTLN("connection failed");
+        return;
+    }
+
+    // We now create a URI for the request
+    String url = "/input/";
+    url += streamId;
+    url += "?private_key=";
+    url += privateKey;
+    url += "&temp=";
+    url += t;
+    url += "&humid=";
+    url += h;
+
+    DEBUG_PRINT("Requesting URL: ");
+    DEBUG_PRINTLN(url);
+
+    // This will send the request to the server
+    client.print(String("GET ") + url + " HTTP/1.1\r\n" +
+                 "Host: " + host + "\r\n" +
+                 "Connection: close\r\n\r\n");
+}
+
 
 void readDht(DHT *dht, float *temp, float *humid) {
 
