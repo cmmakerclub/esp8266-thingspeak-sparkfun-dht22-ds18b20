@@ -2,16 +2,22 @@
 #include <OneWire.h>
 #include <ESP8266WiFi.h>
 
+
+#define DS18x20_PIN 4
+
+#define DHTPIN 2     // what pin we're connected to
+#define DHTTYPE DHT22   // DHT 22  (AM2302)
+
 #define DEBUG
 
 #define DEBUG_PRINTER Serial
 
 #ifdef DEBUG
-  #define DEBUG_PRINT(...) { DEBUG_PRINTER.print(__VA_ARGS__); }
-  #define DEBUG_PRINTLN(...) { DEBUG_PRINTER.println(__VA_ARGS__); }
+#define DEBUG_PRINT(...) { DEBUG_PRINTER.print(__VA_ARGS__); }
+#define DEBUG_PRINTLN(...) { DEBUG_PRINTER.println(__VA_ARGS__); }
 #else
-  #define DEBUG_PRINT(...) {}
-  #define DEBUG_PRINTLN(...) {}
+#define DEBUG_PRINT(...) {}
+#define DEBUG_PRINTLN(...) {}
 #endif
 
 const char* ssid     = "OpenWrt_NAT_500GP.101";
@@ -21,18 +27,21 @@ DHT *dht;
 OneWire *ds;  // on pin 2 (a 4.7K resistor is necessary)
 
 
-void setUpWifi() {
-    // We start by connecting to a WiFi network
+void reconnectWifiIfLinkDown() {
+    if (WiFi.status() != WL_CONNECTED) {
+        DEBUG_PRINTLN("WIFI DISCONNECTED");
+        connectWifi();
+    }
 
+}
+
+void connectWifi() {
     DEBUG_PRINTLN();
     DEBUG_PRINTLN();
     DEBUG_PRINT("Connecting to ");
     DEBUG_PRINTLN(ssid);
 
     WiFi.begin(ssid, password);
-}
-
-void connectWifi() {
     while (WiFi.status() != WL_CONNECTED) {
         delay(500);
         DEBUG_PRINT(".");
@@ -73,16 +82,9 @@ void initDs18b20(OneWire **ds, uint8_t pin) {
 }
 
 void setup() {
-
-#define DHTPIN 2     // what pin we're connected to
-#define DHTTYPE DHT22   // DHT 22  (AM2302)
-
-#define DS18x20_PIN 4
-
     Serial.begin(115200);
     delay(10);
 
-    setUpWifi();
     connectWifi();
 
     initDht(&dht, DHTPIN, DHTTYPE);
@@ -285,4 +287,6 @@ void loop() {
 
     // Wait a few seconds between measurements.
     delay(10 * 1000);
+
+    reconnectWifiIfLinkDown();
 }
