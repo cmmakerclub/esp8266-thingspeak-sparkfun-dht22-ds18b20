@@ -112,11 +112,16 @@ void uploadFn(float t, float h) {
 }
 
 void readDht(DHT *dht, float *temp, float *humid) {
+
+  if (dht == NULL) {
+    Serial.println("[dht22] is not initialised. please call initDht() first.");
+    return;
+  }
+    
   // Reading temperature or humidity takes about 250 milliseconds!
   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
   float h = dht->readHumidity();
 
-  Serial.println("READ HUMID");
   // Read temperature as Celsius
   float t = dht->readTemperature();
   // Read temperature as Fahrenheit
@@ -150,6 +155,12 @@ void readDht(DHT *dht, float *temp, float *humid) {
 }
 
 void readDs18B20(OneWire *ds, float *temp) {
+  if (ds == NULL) {
+    Serial.println("[ds18b20] is not initialised. please call initDs18b20() first.");
+    return;
+  }
+  
+  
   byte i;
   byte present = 0;
   byte type_s;
@@ -251,18 +262,16 @@ void readDs18B20(OneWire *ds, float *temp) {
 }
 
 void loop() {
-  // Wait a few seconds between measurements.
-  delay(2000);
+   static float t_ds;
+   static float t_dht;
+   static float h_dht;
 
-  static float t;
-  static float h;
-  
-  readDht(dht, &t, &h);
-  // readDs18B20(ds, &t);
-  // uploadFn(t, t);
-  // Serial.println(t);
-  Serial.println("LOOPING..");
+   readDht(dht, &t_ds, &h_dht);
+   readDs18B20(ds, &t_ds);
+   
+   //uploadFn(t, t);
+   Serial.println(t_ds);
 
-  delay(5 * 1000);  
-  
+   // Wait a few seconds between measurements.
+   delay(10 *1000);  
 }
