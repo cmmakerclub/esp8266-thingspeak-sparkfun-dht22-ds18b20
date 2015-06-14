@@ -1,9 +1,18 @@
-// Example testing sketch for various DHT humidity/temperature sensors
-// Written by ladyada, public domain
-
 #include "DHT.h"
 #include <OneWire.h>
 #include <ESP8266WiFi.h>
+
+#define DEBUG
+
+#define DEBUG_PRINTER Serial
+
+#ifdef DEBUG
+  #define DEBUG_PRINT(...) { DEBUG_PRINTER.print(__VA_ARGS__); }
+  #define DEBUG_PRINTLN(...) { DEBUG_PRINTER.println(__VA_ARGS__); }
+#else
+  #define DEBUG_PRINT(...) {}
+  #define DEBUG_PRINTLN(...) {}
+#endif
 
 const char* ssid     = "OpenWrt_NAT_500GP.101";
 const char* password = "activegateway";
@@ -19,24 +28,24 @@ OneWire *ds;  // on pin 2 (a 4.7K resistor is necessary)
 void setUpWifi() {
   // We start by connecting to a WiFi network
 
-  Serial.println();
-  Serial.println();
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
-  
-  WiFi.begin(ssid, password);  
+  DEBUG_PRINTLN();
+  DEBUG_PRINTLN();
+  DEBUG_PRINT("Connecting to ");
+  DEBUG_PRINTLN(ssid);
+
+  WiFi.begin(ssid, password);
 }
 
 void connectWifi() {
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    Serial.print(".");
+    DEBUG_PRINT(".");
   }
 
-  Serial.println("");
-  Serial.println("WiFi connected");  
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
+  DEBUG_PRINTLN("");
+  DEBUG_PRINTLN("WiFi connected");
+  DEBUG_PRINTLN("IP address: ");
+  DEBUG_PRINTLN(WiFi.localIP());
 }
 
 void initDht(DHT **dht, uint8_t pin, uint8_t dht_type) {
@@ -55,11 +64,11 @@ void initDht(DHT **dht, uint8_t pin, uint8_t dht_type) {
   // higher the value.  The default for a 16mhz AVR is a value of 6.  For an
   // Arduino Due that runs at 84mhz a value of 30 works.
   // Example to initialize DHT sensor for Arduino Due:
-  //DHT dht(DHTPIN, DHTTYPE, 30); 
+  //DHT dht(DHTPIN, DHTTYPE, 30);
 
-  *dht = new DHT(pin, dht_type, 30); 
-  (*dht)->begin();  
-  Serial.println(F("DHTxx test!"))  ;
+  *dht = new DHT(pin, dht_type, 30);
+  (*dht)->begin();
+  DEBUG_PRINTLN(F("DHTxx test!"))  ;
 }
 
 
@@ -68,14 +77,14 @@ void initDs18b20(OneWire **ds, uint8_t pin) {
 }
 
 void setup() {
-  #define DHTPIN 2     // what pin we're connected to
-  #define DHTTYPE DHT22   // DHT 22  (AM2302)
+#define DHTPIN 2     // what pin we're connected to
+#define DHTTYPE DHT22   // DHT 22  (AM2302)
 
-  #define DS18x20_PIN 4
+#define DS18x20_PIN 4
 
   Serial.begin(115200);
   delay(10);
-  
+
   setUpWifi();
   connectWifi();
 
@@ -88,10 +97,10 @@ void uploadFn(float t, float h) {
   WiFiClient client;
   const int httpPort = 80;
   if (!client.connect(host, httpPort)) {
-    Serial.println("connection failed");
+    DEBUG_PRINTLN("connection failed");
     return;
   }
-  
+
   // We now create a URI for the request
   String url = "/update/";
   //  url += streamId;
@@ -100,24 +109,24 @@ void uploadFn(float t, float h) {
   url += "&field1=";
   url += t;
   url += "&field2=";
-  url += h;  
-  
-  Serial.print("Requesting URL: ");
-  Serial.println(url);
-  
+  url += h;
+
+  DEBUG_PRINT("Requesting URL: ");
+  DEBUG_PRINTLN(url);
+
   // This will send the request to the server
   client.print(String("GET ") + url + " HTTP/1.1\r\n" +
-               "Host: " + host + "\r\n" + 
-               "Connection: close\r\n\r\n");  
+               "Host: " + host + "\r\n" +
+               "Connection: close\r\n\r\n");
 }
 
 void readDht(DHT *dht, float *temp, float *humid) {
 
   if (dht == NULL) {
-    Serial.println("[dht22] is not initialised. please call initDht() first.");
+    DEBUG_PRINTLN("[dht22] is not initialised. please call initDht() first.");
     return;
   }
-    
+
   // Reading temperature or humidity takes about 250 milliseconds!
   // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
   float h = dht->readHumidity();
@@ -126,109 +135,109 @@ void readDht(DHT *dht, float *temp, float *humid) {
   float t = dht->readTemperature();
   // Read temperature as Fahrenheit
   float f = dht->readTemperature(true);
-  
+
   // Check if any reads failed and exit early (to try again).
   if (isnan(h) || isnan(t) || isnan(f)) {
-    Serial.println("Failed to read from DHT sensor!");
+    DEBUG_PRINTLN("Failed to read from DHT sensor!");
     return;
   }
 
   // Compute heat index
   // Must send in temp in Fahrenheit!
   float hi = dht->computeHeatIndex(f, h);
-  
-  Serial.print("Humidity: "); 
-  Serial.print(h);
-  Serial.print(" %\t");
-  Serial.print("Temperature: "); 
-  Serial.print(t);
-  Serial.print(" *C ");
-  Serial.print(f);
-  Serial.print(" *F\t");
-  Serial.print("Heat index: ");
-  Serial.print(hi);
-  Serial.println(" *F");
-  
+
+  DEBUG_PRINT("Humidity: ");
+  DEBUG_PRINT(h);
+  DEBUG_PRINT(" %\t");
+  DEBUG_PRINT("Temperature: ");
+  DEBUG_PRINT(t);
+  DEBUG_PRINT(" *C ");
+  DEBUG_PRINT(f);
+  DEBUG_PRINT(" *F\t");
+  DEBUG_PRINT("Heat index: ");
+  DEBUG_PRINT(hi);
+  DEBUG_PRINTLN(" *F");
+
   *temp = t;
   *humid = f;
-  
+
 }
 
 void readDs18B20(OneWire *ds, float *temp) {
   if (ds == NULL) {
-    Serial.println("[ds18b20] is not initialised. please call initDs18b20() first.");
+    DEBUG_PRINTLN("[ds18b20] is not initialised. please call initDs18b20() first.");
     return;
   }
-  
-  
+
+
   byte i;
   byte present = 0;
   byte type_s;
   byte data[12];
   byte addr[8];
   float celsius, fahrenheit;
-  
+
   if ( !ds->search(addr)) {
-    Serial.println("No more addresses.");
-    Serial.println();
+    DEBUG_PRINTLN("No more addresses.");
+    DEBUG_PRINTLN();
     ds->reset_search();
     delay(250);
     return;
   }
-  
-  Serial.print("ROM =");
-  for( i = 0; i < 8; i++) {
+
+  DEBUG_PRINT("ROM =");
+  for ( i = 0; i < 8; i++) {
     Serial.write(' ');
-    Serial.print(addr[i], HEX);
+    DEBUG_PRINT(addr[i], HEX);
   }
 
   if (OneWire::crc8(addr, 7) != addr[7]) {
-      Serial.println("CRC is not valid!");
-      return;
+    DEBUG_PRINTLN("CRC is not valid!");
+    return;
   }
-  Serial.println();
- 
+  DEBUG_PRINTLN();
+
   // the first ROM byte indicates which chip
   switch (addr[0]) {
     case 0x10:
-      Serial.println("  Chip = DS18S20");  // or old DS1820
+      DEBUG_PRINTLN("  Chip = DS18S20");  // or old DS1820
       type_s = 1;
       break;
     case 0x28:
-      Serial.println("  Chip = DS18B20");
+      DEBUG_PRINTLN("  Chip = DS18B20");
       type_s = 0;
       break;
     case 0x22:
-      Serial.println("  Chip = DS1822");
+      DEBUG_PRINTLN("  Chip = DS1822");
       type_s = 0;
       break;
     default:
-      Serial.println("Device is not a DS18x20 family device.");
+      DEBUG_PRINTLN("Device is not a DS18x20 family device.");
       return;
-  } 
+  }
 
   ds->reset();
   ds->select(addr);
   ds->write(0x44, 1);        // start conversion, with parasite power on at the end
-  
+
   delay(1000);     // maybe 750ms is enough, maybe not
   // we might do a ds->depower() here, but the reset will take care of it.
-  
+
   present = ds->reset();
-  ds->select(addr);    
+  ds->select(addr);
   ds->write(0xBE);         // Read Scratchpad
 
-  Serial.print("  Data = ");
-  Serial.print(present, HEX);
-  Serial.print(" ");
+  DEBUG_PRINT("  Data = ");
+  DEBUG_PRINT(present, HEX);
+  DEBUG_PRINT(" ");
   for ( i = 0; i < 9; i++) {           // we need 9 bytes
     data[i] = ds->read();
-    Serial.print(data[i], HEX);
-    Serial.print(" ");
+    DEBUG_PRINT(data[i], HEX);
+    DEBUG_PRINT(" ");
   }
-  Serial.print(" CRC=");
-  Serial.print(OneWire::crc8(data, 8), HEX);
-  Serial.println();
+  DEBUG_PRINT(" CRC=");
+  DEBUG_PRINT(OneWire::crc8(data, 8), HEX);
+  DEBUG_PRINTLN();
 
   // Convert the data to actual temperature
   // because the result is a 16 bit signed integer, it should
@@ -251,27 +260,27 @@ void readDs18B20(OneWire *ds, float *temp) {
   }
   celsius = (float)raw / 16.0;
   fahrenheit = celsius * 1.8 + 32.0;
-  Serial.print("  Temperature = ");
-  Serial.print(celsius);
-  Serial.print(" Celsius, ");
-  Serial.print(fahrenheit);
-  Serial.println(" Fahrenheit");
-    
-    
+  DEBUG_PRINT("  Temperature = ");
+  DEBUG_PRINT(celsius);
+  DEBUG_PRINT(" Celsius, ");
+  DEBUG_PRINT(fahrenheit);
+  DEBUG_PRINTLN(" Fahrenheit");
+
+
   *temp = celsius;
 }
 
 void loop() {
-   static float t_ds;
-   static float t_dht;
-   static float h_dht;
+  static float t_ds;
+  static float t_dht;
+  static float h_dht;
 
-   readDht(dht, &t_ds, &h_dht);
-   readDs18B20(ds, &t_ds);
-   
-   //uploadFn(t, t);
-   Serial.println(t_ds);
+  readDht(dht, &t_ds, &h_dht);
+  readDs18B20(ds, &t_ds);
 
-   // Wait a few seconds between measurements.
-   delay(10 *1000);  
+  //uploadFn(t, t);
+  DEBUG_PRINTLN(t_ds);
+
+  // Wait a few seconds between measurements.
+  delay(10 * 1000);
 }
